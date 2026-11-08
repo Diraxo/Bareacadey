@@ -1,0 +1,30 @@
+
+.product_title {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 25px;
+}
+
+// .p-carousel-prev,
+// .p-carousel-next {
+//   width: 40px;
+//   height: 40px;
+//   border-radius: 50%;
+//   background-color: #1ea966;
+// }
+
+// .p-carousel-indicators {
+//     bottom: 10px;
+//     gap: 10px
+//   }
+  
+//   .p-carousel-indicator {
+//     width: 15px;
+//     height: 15px;
+//     border-radius: 50%;
+//     background-color: #1ea966;
+//     display: block
+//   }

@@ -1,0 +1,36 @@
+# 03 — Security Report (preliminary, prioritized)
+
+Status: findings below were **confirmed by reading source** unless marked *(to verify)*. Nothing has been exploited or run against a live system. No fixes applied yet.
+Secrets are referred to by location only; their values are intentionally not reproduced.
+
+## Critical
+
+| ID | Finding | Evidence | Fix plan |
+|---|---|---|---|
+| **S1** | **Unauthenticated `POST /sync-database`** can `sync({force:true})` (drops and recreates every table) or `alter` the live schema. It is registered before `verifyJWT`. The `model` parameter is joined into a path and `require()`d (`../`-style traversal → arbitrary local `.js` loaded/executed). | `server.js:700-720` | Delete endpoint. Replace with offline CLI `scripts/db-init.js` that refuses `force`, refuses a non-empty DB unless explicitly told, and is never exposed over HTTP. |
+| **S2** | **Secrets in source and project files**: live `.env` files (DB, JWT secrets, SMTP, Chapa key, Google client secret, backup password) in all three apps; hard-coded SMTP host/user/password in `server.js` `MigrateConfigurations`; hard-coded super-admin email/phone/password in commented seed code; `ebirr.php` contains the MySQL credential for the *production* Node database and a static wallet-gateway token; `bare/credentials.json` holds keystore + key passwords next to the keystore files; `bare/.git` exists (history not yet checked for committed secrets). | `server.js:896-914, 1046-1059`; `ebirr.php:13,20`; `bare/credentials.json` | **Treat every one of these as compromised → rotate all** (DB, SMTP, JWT, Chapa, Google, gateway token). Remove from code, load only from env, ship `.env.example` with placeholders, add `.gitignore` entries. Keystore: rotate nothing automatically (would break updates) — move out of repo, store securely, document. |
+| **S3** | **Mobile payment (`ebirr.php`) trusts the client**: unauthenticated GET; `amount`, `id` (user), `course_id` come from the query string and are inserted into `Payments` as `paid=1` with no check against the course price or the caller's identity; raw string concatenation into SQL (**SQL injection**, including `course_id` unquoted). Anyone can grant any user any course, pay less than the price, or run SQL against the production DB. | `ebirr.php:4-7, 30-51` | Re-implement server-side in Node: JWT-authenticated, price from `Course`, parameterised Sequelize writes. Until then treat the old endpoint as exploitable. |
+| **S4** | **Chapa callback marks payments paid without checking the result**: `verify-payment` only checks that Chapa's verify call *returned HTTP success*; it does not check `status === "success"`, amount, currency, or tx_ref ownership; it trusts the `tx_ref` string to derive user/course ids. Endpoint is public and duplicated (`open_public` and `public`, the latter would throw if payment not found). *(Whether Chapa returns HTTP 200 for pending transactions should be confirmed against Chapa docs — if it does, this is directly exploitable.)* | `OpenPublicController.js:13-58`, `PublicController.js:974-1012` | Verify `data.status==='success'`, amount/currency equal stored `Payment`, and only update an existing pending row; remove the duplicate; make idempotent; add Chapa webhook signature check if available. |
+| **S5** | **Socket.IO has no authentication**; `new_message` and `video-call` are `io.emit` to **all** clients (private chat leakage); `join` accepts any user id; CORS `*`. | `server.js:535-643` | Authenticate sockets with the access JWT in the handshake; emit only to the recipient's room; restrict origin to the configured web domain. |
+
+## High
+
+| ID | Finding | Evidence | Fix plan |
+|---|---|---|---|
+| S6 | `express.static('files')` serves the whole `files/` tree publicly — including `uploads/hls-key/enc.key` and all course media — so the Referer check on `/uploads/common/*` is bypassed (and a Referer is trivially spoofable). Paid video content and its AES key are downloadable by anyone with the URL. `enc.key` is also committed in the project. | `server.js:785-840` | Serve media only through authorised routes (enrolment/payment check, short-lived signed URLs); HLS key endpoint must require JWT + payment; generate a new key and re-encode on re-upload (videos are being re-uploaded anyway). |
+| S7 | Cookies: `secure:false`, no `sameSite`; session secret reuses `ACCESS_TOKEN_SECRET`; `saveUninitialized:true` with in-memory store. Refresh tokens stored plaintext in `Users.refresh_token`, accepted from request body as well as cookie. | `AuthController.js:~135`, `server.js:520-524, 745-749` | `secure` in production, `sameSite` per final domain layout, separate `SESSION_SECRET`, hash stored refresh tokens, rotate on use. Must keep mobile (body token) flow working. |
+| S8 | Mobile gate is a static header value + UA substring compiled into the app: obscurity, not authentication; also crashes if `User-Agent` is absent. | `mobileCredentials.js` | Keep for compatibility (existing apps send it) but do not rely on it; move value to env; add rate limiting. |
+| S9 | Login has no rate limiting/lockout; email-confirmation and new-device checks are **commented out**. | `AuthController.js:57-80` | Add rate limiting; decide with the academy whether to restore email verification (behaviour change → their call). |
+| S10 | Unsafe error output: global handler returns `err.message`; `verifyJWT` returns the raw JWT error object; several handlers swallow exceptions (`catch(e){}`) leaving requests hanging. | `errorHandler.js`, `verifyJWT.js`, `UserController.js:278,300` | Generic messages to clients, details to server logs only. |
+| S11 | Old `/block/` and `/check/` (PHP) take a user id from the caller with no auth → anyone can block any account *(inferred; source missing)*. | `Logout.jsx` | Re-implement behind JWT, use `req.user.id`. |
+| S12 | Upload hardening not yet reviewed in depth: no size/type limits on `express-fileupload`, JSON/urlencoded body limit 200 MB, original filename embedded in stored name. *(to verify remaining 170 lines of `commonFileUploader.js`)* | `server.js:529-651` | Allow-list MIME + extension, sanitize names, per-type size caps, storage outside web root. |
+
+## Medium / Low
+- S13 `GET /api/contacts_public` mounts the same router as authenticated `/api/contacts` *(to verify per-route)*.
+- S14 `DELETE /api/users`: missing `return` after validation; null dereference when user absent; swallowed errors.
+- S15 Dead/dangerous `POST /api/pay` test route with hard-coded buyer data and a `localhost:4400` return URL (also `PaymentController.js:299`).
+- S16 Discount logic charges `discount_percentage × price / 100` (i.e. the *percent amount*, not price minus discount) — likely a pricing bug; **behaviour change, confirm with academy before altering**.
+- S17 Outdated dependencies (`jsonwebtoken` 8.x, `multer` 1.x, `joi` 13, `express-session` memory store) — `npm audit` not yet run.
+- S18 `process.env.TZ` is set after startup (too late to affect Node reliably).
+- S19 Hard-coded production origins in `credentials.js` (including `accounts.google.com` as a CORS origin) and `localhost` dev origins.
+- S20 `__MACOSX/`, `.DS_Store`, `logs/errLog.txt` (2268 lines, may contain PII/stack traces) in the deliverable.

@@ -1,0 +1,43 @@
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+credentials.json
+**/credentials.json
+*.keystore
+*.jks
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+keytool
+serviceAccount*.json
+google-services.json
+GoogleService-Info.plist
+
+# Dependencies / build output
+node_modules/
+**/node_modules/
+.expo/
+dist/
+web-build/
+release/
+.verify/
+__MACOSX/
+_archive_unused/
+
+# Backups / misc
+.*.bak*
+*.bak
+.DS_Store
+._*
+logs/
+npm-debug.*
+*.tsbuildinfo
+backend/files/uploads/**
+!backend/files/uploads/**/.gitkeep
+backend/public

@@ -1,0 +1,73 @@
+.table-email {
+    font-family: ubuntu;
+    tbody {
+        tr {
+            height: 70px;
+            &:hover {
+                cursor: pointer;
+                box-shadow: 0px 2px 4px 0px rgba(17, 17, 17, 0.3);
+                transform: translateY(-2px);
+            }
+        }
+        .text-bold-main {
+            font-weight: bold;
+            color: #36373a;
+        }
+        .text-bold-desc {
+            color: #36373a;
+        }
+        .checkbox {
+            width: 20px;
+            input {
+                &:hover {
+                    cursor: pointer;
+                }
+            }
+        }
+
+        .name {
+            min-width: 200px;
+            color: #524e59;
+            font-size: 16px;
+        }
+        .message {
+            max-width: 200px;
+            color: #a3a0a5;
+            font-size: 14px;
+        }
+
+        .time {
+          min-width: 50px;
+          text-align: right;
+          font-size: 14px;
+          color: #908d94;
+        }
+    }
+
+}
+
+.input-checkbox {
+    &:hover {
+        cursor: pointer;
+    }
+}
+
+@media only screen and (min-width: 1000px) {
+    .table-email {
+        .message {
+            max-width: 300px;
+            color: #a3a0a5;
+            font-size: 14px;
+        }
+    }
+}
+
+@media only screen and (min-width: 1200px) {
+    .table-email {
+        .message {
+            max-width: 500px;
+            color: #a3a0a5;
+            font-size: 14px;
+        }
+    }
+}

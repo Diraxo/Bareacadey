@@ -1,0 +1,14 @@
+.print-component {
+  display: none;
+}
+
+@media print {
+  .print-component {
+    display: block;
+  }
+  @page {
+    /* margin-top: 1cm;
+    margin-bottom: 0.5cm; */
+    /* padding: 0.5cm; */
+  }
+}

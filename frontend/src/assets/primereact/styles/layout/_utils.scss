@@ -1,0 +1,45 @@
+/* Utils */
+.clearfix:after {
+    content: " ";
+    display: block;
+    clear: both;
+}
+
+.card {
+    background: var(--surface-card);
+    border: 1px solid var(--surface-border);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--card-shadow);
+    border-radius: $borderRadius;
+    max-width: calc(100vw - 45px);
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+@media only screen and (min-width: 1200px) {
+    .card {
+        max-width: calc(100vw - 300px)
+    }
+}
+
+@media only screen and (min-width: 1250px) {
+    .card {
+        max-width: calc(100vw - 260px - 45px)
+    }
+}
+
+@media only screen and (max-width: 600px) {
+    .card {
+        max-width: calc(100vw - 30px);
+    }
+}
+.p-toast {
+    &.p-toast-top-right,
+    &.p-toast-top-left,
+    &.p-toast-top-center {
+        top: 100px;
+    }
+}
